@@ -24,6 +24,10 @@
             box-sizing: border-box;
         }
 
+        #file-input {
+            width: 100%;
+        }
+
         #col-right {
             width: 85%;
             display: flex;
@@ -33,6 +37,8 @@
         #seq-container {
             display: flex;
             height: 50%;
+            padding-bottom: 8px;
+            box-sizing: border-box;
         }
 
         #fasta-contaner,
@@ -47,7 +53,7 @@
             width: 100%;
             line-break: anywhere;
             overflow-y: auto;
-            margin-top: 0;
+            margin: 0;
         }
 
         #fastq-result {
@@ -61,22 +67,22 @@
         }
 
         .btn {
+            color: unset;
             text-decoration: none;
             background-color: #EEEEEE;
             font-size: 0.9em;
             padding: 1px 6px;
-            margin: 2px 0;
             border-top: 1px solid #CCCCCC;
             border-right: 1px solid #333333;
             border-bottom: 1px solid #333333;
             border-left: 1px solid #CCCCCC;
             border-radius: 2px;
             cursor: default;
+            display: inline-block;
         }
 
         .btn[href] {
             cursor: pointer;
-            color: unset;
         }
     </style>
 </head>
@@ -162,7 +168,7 @@
         return svg
     }
     function draw_svg(abi, svgHeight = 200, textSize = 16) {
-        svg = create_svg(abi, svgHeight = 200, textSize = 16)
+        svg = create_svg(abi, svgHeight, textSize)
         document.querySelector("#chroma-container").innerHTML = ""
         document.querySelector("#chroma-container").append(svg)
         var btn = document.getElementById("svg-export")
