@@ -59,6 +59,25 @@
             overflow-x: auto;
             flex: 1;
         }
+
+        .btn {
+            text-decoration: none;
+            background-color: #EEEEEE;
+            font-size: 0.9em;
+            padding: 1px 6px;
+            margin: 2px 0;
+            border-top: 1px solid #CCCCCC;
+            border-right: 1px solid #333333;
+            border-bottom: 1px solid #333333;
+            border-left: 1px solid #CCCCCC;
+            border-radius: 2px;
+            cursor: default;
+        }
+
+        .btn[href] {
+            cursor: pointer;
+            color: unset;
+        }
     </style>
 </head>
 
@@ -75,21 +94,22 @@
     <div id="col-right">
         <div id="seq-container">
             <div id="fasta-contaner">
-                <div style="text-align: center;">fasta <button id="fasta-export">export</button></div>
+                <div style="text-align: center;">fasta <a class="btn" id="fasta-export">export</a></div>
                 <pre id="fasta-result"></pre>
             </div>
             <div id="fastq-contaner">
-                <div style="text-align: center;">fastq <button id="fastq-export">export</button></div>
+                <div style="text-align: center;">fastq <a class="btn" id="fastq-export">export</a></div>
                 <pre id="fastq-result"></pre>
             </div>
         </div>
-        <div style="text-align: center;">Chromatography <button id="fastq-export">export</button></div>
+        <div style="text-align: center;">Chromatography <a class="btn" id="svg-export">export</a></div>
         <div id="chroma-container"></div>
     </div>
 </body>
 <script src="abif.js"></script>
 <script>
-    function draw_svg(abi, svgHeight = 200, textSize = 16) {
+
+    function create_svg(abi, svgHeight = 200, textSize = 16) {
         var data = {
             G: abi.data.DATA_9,
             A: abi.data.DATA_10,
@@ -139,19 +159,38 @@
             }
             svg.append(g)
         }
-
+        return svg
+    }
+    function draw_svg(abi, svgHeight = 200, textSize = 16) {
+        svg = create_svg(abi, svgHeight = 200, textSize = 16)
         document.querySelector("#chroma-container").innerHTML = ""
         document.querySelector("#chroma-container").append(svg)
+        var btn = document.getElementById("svg-export")
+        btn.href = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+        btn.setAttribute("download", "export.svg");
     }
 
     function file_handler(file) {
         file.arrayBuffer().then(ab => {
             var abi = parse_abif(ab)
-            document.querySelector("#fasta-result").innerText = ">" + abi.data.SMPL_1 + "\n" + abi.data.PBAS_1.match(/.{1,70}/g).join("\n")
-            document.querySelector("#fastq-result").innerText = `@${abi.data.SMPL_1}
+            var fasta_content = ">" + abi.data.SMPL_1 + "\n" + abi.data.PBAS_1.match(/.{1,70}/g).join("\n")
+            document.querySelector("#fasta-result").innerText = fasta_content
+
+            var btn = document.getElementById("fasta-export");
+            btn.href = URL.createObjectURL(new Blob([fasta_content], { type: 'text/plain' }));
+            btn.setAttribute("download", abi.data.SMPL_1 + ".fa")
+
+            var fastq_content = `@${abi.data.SMPL_1}
 ${abi.data.PBAS_1}
 +
 ${abi.data.PCON_1.map(x => String.fromCharCode(x + 33)).join("")}`
+
+            document.querySelector("#fastq-result").innerText = fastq_content
+
+            var btn = document.getElementById("fastq-export");
+            btn.href = URL.createObjectURL(new Blob([fasta_content], { type: 'text/plain' }));
+            btn.setAttribute("download", abi.data.SMPL_1 + ".fq")
+
             var inputPlotHeight = document.querySelector("#svg-plot-height")
             var inputTextSize = document.querySelector("#svg-text-size")
 
