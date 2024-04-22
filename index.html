@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanger abif browser</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+        }
+
+        #col-left {
+            width: 15%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        #col-right {
+            width: 85%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #seq-container {
+            display: flex;
+            height: 50%;
+        }
+
+        #fasta-contaner,
+        #fastq-contaner {
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #fasta-result,
+        #fastq-result {
+            width: 100%;
+            line-break: anywhere;
+            overflow-y: auto;
+            margin-top: 0;
+        }
+
+        #fastq-result {
+            white-space: pre-wrap;
+        }
+
+        #chroma-container {
+            width: 100%;
+            overflow-x: auto;
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="col-left">
+        <h2>Sanger abif browser</h2>
+        <p>drop/paste/upload a Sanger <code>abi</code> file for visualization</p>
+        <input type="file" id="file-input" onchange="file_handler(this.files[0])">
+        <h3>chromatography settings</h3>
+        plot height:<br><input type="number" id="svg-plot-height" value="200">
+        text size:<br><input type="number" id="svg-text-size" value="16">
+        zoom:<br><input type="number" id="chroma-zoom" value="1" step="0.1">
+    </div>
+    <div id="col-right">
+        <div id="seq-container">
+            <div id="fasta-contaner">
+                <div style="text-align: center;">fasta <button id="fasta-export">export</button></div>
+                <pre id="fasta-result"></pre>
+            </div>
+            <div id="fastq-contaner">
+                <div style="text-align: center;">fastq <button id="fastq-export">export</button></div>
+                <pre id="fastq-result"></pre>
+            </div>
+        </div>
+        <div style="text-align: center;">Chromatography <button id="fastq-export">export</button></div>
+        <div id="chroma-container"></div>
+    </div>
+</body>
+<script src="abif.js"></script>
+<script>
+    function draw_svg(abi, svgHeight = 200, textSize = 16) {
+        var data = {
+            G: abi.data.DATA_9,
+            A: abi.data.DATA_10,
+            T: abi.data.DATA_11,
+            C: abi.data.DATA_12,
+        }
+        var baseColor = { A: "green", T: "red", C: "blue", G: "black" }
+
+        dataMax = Math.max(...data.G, ...data.A, ...data.T, ...data.C)
+        svgWidth = data.G.length
+
+        var svgNS = "http://www.w3.org/2000/svg"
+        var svg = document.createElementNS(svgNS, 'svg')
+        svg.setAttribute('xmlns', "http://www.w3.org/2000/svg")
+        svg.setAttribute('viewBox', `-5 ${-svgHeight} ${svgWidth + 10} ${+svgHeight + 1 + textSize * 1.25}`)
+        svg.setAttribute('width', svgWidth + "px")
+        svg.setAttribute('height', `${+svgHeight + 1 + textSize * 1.25}px`)
+
+        var g = document.createElementNS(svgNS, 'g')
+        g.setAttribute("fill", "none")
+        g.setAttribute("stroke-width", "1")
+        g.setAttribute("stroke-linejoin", "bevel")
+
+        for (var k in data) {
+            var path = document.createElementNS(svgNS, 'path')
+            path.setAttribute("d", data[k].map((x, i) => (i == 0 ? "M" : "L") + i + "," + -x / dataMax * svgHeight).join(""))
+            path.setAttribute("stroke", baseColor[k])
+            g.append(path)
+        }
+
+        svg.append(g)
+
+        if (textSize > 0) {
+            g = document.createElementNS(svgNS, 'g')
+            g.setAttribute("text-anchor", "middle")
+            g.setAttribute("dominant-baseline", "text-before-edge")
+            g.setAttribute("font-size", textSize)
+
+            for (var i = 0; i < abi.data.PBAS_1.length; i++) {
+                var text = document.createElementNS(svgNS, 'text')
+                var base = abi.data.PBAS_1[i]
+                text.innerHTML = base
+                text.setAttribute("x", abi.data.PLOC_1[i])
+                text.setAttribute("y", "0")
+                text.setAttribute("fill", baseColor[base])
+                g.append(text)
+            }
+            svg.append(g)
+        }
+
+        document.querySelector("#chroma-container").innerHTML = ""
+        document.querySelector("#chroma-container").append(svg)
+    }
+
+    function file_handler(file) {
+        file.arrayBuffer().then(ab => {
+            var abi = parse_abif(ab)
+            document.querySelector("#fasta-result").innerText = ">" + abi.data.SMPL_1 + "\n" + abi.data.PBAS_1.match(/.{1,70}/g).join("\n")
+            document.querySelector("#fastq-result").innerText = `@${abi.data.SMPL_1}
+${abi.data.PBAS_1}
++
+${abi.data.PCON_1.map(x => String.fromCharCode(x + 33)).join("")}`
+            var inputPlotHeight = document.querySelector("#svg-plot-height")
+            var inputTextSize = document.querySelector("#svg-text-size")
+
+            inputPlotHeight.onchange = () => draw_svg(abi, +inputPlotHeight.value, +inputTextSize.value)
+            inputTextSize.onchange = () => draw_svg(abi, +inputPlotHeight.value, +inputTextSize.value)
+
+            draw_svg(abi, +inputPlotHeight.value, +inputTextSize.value)
+        })
+    }
+    document.querySelector("#chroma-zoom").onchange = function () {
+        document.querySelector("#chroma-container").style.zoom = this.value
+    }
+
+    document.onpaste = (e) => {
+        if (e.clipboardData.files.length > 0) file_handler(e.clipboardData.files[0])
+    }
+    document.ondrop = (event) => {
+        event.preventDefault()
+        if (event.dataTransfer.files.length > 0) file_handler(event.dataTransfer.files[0])
+    }
+    document.ondragover = (event) => { event.preventDefault() }
+    document.ondragenter = (event) => { event.preventDefault() }
+</script>
+
+</html>
