@@ -24,6 +24,10 @@
             box-sizing: border-box;
         }
 
+        #file-input {
+            width: 100%;
+        }
+
         #col-right {
             width: 85%;
             display: flex;
@@ -33,6 +37,8 @@
         #seq-container {
             display: flex;
             height: 50%;
+            padding-bottom: 8px;
+            box-sizing: border-box;
         }
 
         #fasta-contaner,
@@ -47,7 +53,7 @@
             width: 100%;
             line-break: anywhere;
             overflow-y: auto;
-            margin-top: 0;
+            margin: 0;
         }
 
         #fastq-result {
@@ -59,6 +65,25 @@
             overflow-x: auto;
             flex: 1;
         }
+
+        .btn {
+            color: unset;
+            text-decoration: none;
+            background-color: #EEEEEE;
+            font-size: 0.9em;
+            padding: 1px 6px;
+            border-top: 1px solid #CCCCCC;
+            border-right: 1px solid #333333;
+            border-bottom: 1px solid #333333;
+            border-left: 1px solid #CCCCCC;
+            border-radius: 2px;
+            cursor: default;
+            display: inline-block;
+        }
+
+        .btn[href] {
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -68,28 +93,29 @@
         <p>drop/paste/upload a Sanger <code>abi</code> file for visualization</p>
         <input type="file" id="file-input" onchange="file_handler(this.files[0])">
         <h3>chromatography settings</h3>
-        plot height:<br><input type="number" id="svg-plot-height" value="200">
-        text size:<br><input type="number" id="svg-text-size" value="16">
+        plot height:<br><input type="number" id="svg-plot-height" value="200"><br>
+        text size:<br><input type="number" id="svg-text-size" value="16"><br>
         zoom:<br><input type="number" id="chroma-zoom" value="1" step="0.1">
     </div>
     <div id="col-right">
         <div id="seq-container">
             <div id="fasta-contaner">
-                <div style="text-align: center;">fasta <button id="fasta-export">export</button></div>
+                <div style="text-align: center;">fasta <a class="btn" id="fasta-export">export</a></div>
                 <pre id="fasta-result"></pre>
             </div>
             <div id="fastq-contaner">
-                <div style="text-align: center;">fastq <button id="fastq-export">export</button></div>
+                <div style="text-align: center;">fastq <a class="btn" id="fastq-export">export</a></div>
                 <pre id="fastq-result"></pre>
             </div>
         </div>
-        <div style="text-align: center;">Chromatography <button id="fastq-export">export</button></div>
+        <div style="text-align: center;">Chromatography <a class="btn" id="svg-export">export</a></div>
         <div id="chroma-container"></div>
     </div>
 </body>
 <script src="abif.js"></script>
 <script>
-    function draw_svg(abi, svgHeight = 200, textSize = 16) {
+
+    function create_svg(abi, svgHeight = 200, textSize = 16) {
         var data = {
             G: abi.data.DATA_9,
             A: abi.data.DATA_10,
@@ -139,19 +165,38 @@
             }
             svg.append(g)
         }
-
+        return svg
+    }
+    function draw_svg(abi, svgHeight = 200, textSize = 16) {
+        svg = create_svg(abi, svgHeight, textSize)
         document.querySelector("#chroma-container").innerHTML = ""
         document.querySelector("#chroma-container").append(svg)
+        var btn = document.getElementById("svg-export")
+        btn.href = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+        btn.setAttribute("download", "export.svg");
     }
 
     function file_handler(file) {
         file.arrayBuffer().then(ab => {
             var abi = parse_abif(ab)
-            document.querySelector("#fasta-result").innerText = ">" + abi.data.SMPL_1 + "\n" + abi.data.PBAS_1.match(/.{1,70}/g).join("\n")
-            document.querySelector("#fastq-result").innerText = `@${abi.data.SMPL_1}
+            var fasta_content = ">" + abi.data.SMPL_1 + "\n" + abi.data.PBAS_1.match(/.{1,70}/g).join("\n")
+            document.querySelector("#fasta-result").innerText = fasta_content
+
+            var btn = document.getElementById("fasta-export");
+            btn.href = URL.createObjectURL(new Blob([fasta_content], { type: 'text/plain' }));
+            btn.setAttribute("download", abi.data.SMPL_1 + ".fa")
+
+            var fastq_content = `@${abi.data.SMPL_1}
 ${abi.data.PBAS_1}
 +
 ${abi.data.PCON_1.map(x => String.fromCharCode(x + 33)).join("")}`
+
+            document.querySelector("#fastq-result").innerText = fastq_content
+
+            var btn = document.getElementById("fastq-export");
+            btn.href = URL.createObjectURL(new Blob([fasta_content], { type: 'text/plain' }));
+            btn.setAttribute("download", abi.data.SMPL_1 + ".fq")
+
             var inputPlotHeight = document.querySelector("#svg-plot-height")
             var inputTextSize = document.querySelector("#svg-text-size")
 
