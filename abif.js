@@ -8,7 +8,7 @@
 * Fields may vary by machine and basecaller versions.
 * This function is based on the `read.abif` function from R package `sangerseqR`.
 * @param {ArrayBuffer} rawdata
-* @returns {object}
+* @returns {{header, directory, data}}
 */
 function parse_abif(rawdata) {
     var enc = new TextDecoder("utf-8");
@@ -16,7 +16,7 @@ function parse_abif(rawdata) {
         return enc.decode(ab);
     }
     function UInt8(ab) {
-        n = ab.byteLength
+        var n = ab.byteLength
         if (n == 1) {
             return new DataView(ab).getUint8();
         }
@@ -29,7 +29,7 @@ function parse_abif(rawdata) {
     }
 
     function UInt16(ab) {
-        n = ab.byteLength / 2
+        var n = ab.byteLength / 2
         if (n == 1) {
             return new DataView(ab).getUint16();
         }
@@ -42,7 +42,7 @@ function parse_abif(rawdata) {
     }
 
     function SInt16(ab) {
-        n = ab.byteLength / 2
+        var n = ab.byteLength / 2
         if (n == 1) {
             return new DataView(ab).getInt16();
         }
@@ -55,7 +55,7 @@ function parse_abif(rawdata) {
     }
 
     function SInt32(ab) {
-        n = ab.byteLength / 4
+        var n = ab.byteLength / 4
         if (n == 1) {
             return new DataView(ab).getInt32();
         }
@@ -68,7 +68,7 @@ function parse_abif(rawdata) {
     }
 
     function f32(ab) {
-        n = ab.byteLength / 4
+        var n = ab.byteLength / 4
         if (n == 1) {
             return new DataView(ab).getFloat32(0, true);
         }
@@ -81,7 +81,7 @@ function parse_abif(rawdata) {
     }
 
     function f64(ab) {
-        n = ab.byteLength / 8
+        var n = ab.byteLength / 8
         if (n == 1) {
             return new DataView(ab).getFloat64(0, true);
         }
