@@ -8,22 +8,22 @@
 * Fields may vary by machine and basecaller versions.
 * This function is based on the `read.abif` function from R package `sangerseqR`.
 * @param {ArrayBuffer} rawdata
-* @returns {{header, directory, data}}
+* @returns {{header:Object, directory:Object[], data:Object}}
 */
 function parse_abif(rawdata) {
-    var enc = new TextDecoder("utf-8");
+    var dec = new TextDecoder("utf-8")
     function RTC(ab) {
-        return enc.decode(ab);
+        return dec.decode(ab)
     }
     function UInt8(ab) {
         var n = ab.byteLength
         if (n == 1) {
-            return new DataView(ab).getUint8();
+            return new DataView(ab).getUint8()
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getUint8(i);
+            arr[i] = dview.getUint8(i)
         }
         return arr
     }
@@ -31,12 +31,12 @@ function parse_abif(rawdata) {
     function UInt16(ab) {
         var n = ab.byteLength / 2
         if (n == 1) {
-            return new DataView(ab).getUint16();
+            return new DataView(ab).getUint16()
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getUint16(i * 2);
+            arr[i] = dview.getUint16(i * 2)
         }
         return arr
     }
@@ -44,12 +44,12 @@ function parse_abif(rawdata) {
     function SInt16(ab) {
         var n = ab.byteLength / 2
         if (n == 1) {
-            return new DataView(ab).getInt16();
+            return new DataView(ab).getInt16()
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getInt16(i * 2);
+            arr[i] = dview.getInt16(i * 2)
         }
         return arr
     }
@@ -57,12 +57,12 @@ function parse_abif(rawdata) {
     function SInt32(ab) {
         var n = ab.byteLength / 4
         if (n == 1) {
-            return new DataView(ab).getInt32();
+            return new DataView(ab).getInt32()
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getInt32(i * 4);
+            arr[i] = dview.getInt32(i * 4)
         }
         return arr
     }
@@ -70,12 +70,12 @@ function parse_abif(rawdata) {
     function f32(ab) {
         var n = ab.byteLength / 4
         if (n == 1) {
-            return new DataView(ab).getFloat32(0, true);
+            return new DataView(ab).getFloat32(0)
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getFloat32(i * 4, true);
+            arr[i] = dview.getFloat32(i * 4)
         }
         return arr
     }
@@ -83,12 +83,12 @@ function parse_abif(rawdata) {
     function f64(ab) {
         var n = ab.byteLength / 8
         if (n == 1) {
-            return new DataView(ab).getFloat64(0, true);
+            return new DataView(ab).getFloat64(0)
         }
-        var arr = new Array(n);
-        var dview = new DataView(ab);
+        var arr = new Array(n)
+        var dview = new DataView(ab)
         for (var i = 0; i < n; i++) {
-            arr[i] = dview.getFloat64(i * 8, true);
+            arr[i] = dview.getFloat64(i * 8)
         }
         return arr
     }
@@ -112,29 +112,22 @@ function parse_abif(rawdata) {
         var deb = i * res.header.elementsize + res.header.dataoffset
         var direntry = rawdata.slice(deb, deb + res.header.elementsize)
         var name = RTC(direntry.slice(0, 4))
-        var tagnumber = SInt32(direntry.slice(4, 8));
+        var tagnumber = SInt32(direntry.slice(4, 8))
         var elementtype = name == "PCON" ? 1 : SInt16(direntry.slice(8, 10))
-        var elementsize = SInt16(direntry.slice(10, 12));
-        var datasize = SInt32(direntry.slice(16, 20));
-        var numelements = SInt32(direntry.slice(12, 16));
-        var dataoffset = 0;
-        var data;
-        if (datasize <= 4) {
-            dataoffset = deb + 20
-        } else {
-            dataoffset = SInt32(direntry.slice(20, 24));
-            data = rawdata.slice(dataoffset, dataoffset + numelements * elementsize)
-        }
-        data = rawdata.slice(dataoffset, dataoffset + numelements * elementsize)
+        var elementsize = SInt16(direntry.slice(10, 12))
+        var datasize = SInt32(direntry.slice(16, 20))
+        var numelements = SInt32(direntry.slice(12, 16))
+        var dataoffset = datasize <= 4 ? deb + 20 : SInt32(direntry.slice(20, 24))
+        var data = rawdata.slice(dataoffset, dataoffset + numelements * elementsize)
 
         res.directory.push({
-            name: name,
-            tagnumber: tagnumber,
-            elementtype: elementtype,
-            elementsize: elementsize,
-            numelements: numelements,
-            datasize: datasize,
-            dataoffset: dataoffset
+            name,
+            tagnumber,
+            elementtype,
+            elementsize,
+            numelements,
+            datasize,
+            dataoffset
         })
 
         if (elementtype == 1) {
